@@ -4,4 +4,6 @@
     <color name="white">#FFFFFFFF</color>
     <color name="turquoise">#00BFA9</color>
     <color name="orange">#DD7200</color>
+    <color name="lightGray">#BDBDBD</color>
+    <color name="darkGray">#555555</color>
 </resources>
