@@ -28,6 +28,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textFrequency"
         android:layout_marginTop="300dp"
-        android:background="@drawable/icon_controller"/>
+        android:background="@drawable/icon_controller_off"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
