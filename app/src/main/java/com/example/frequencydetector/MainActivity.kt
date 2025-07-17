@@ -2,6 +2,7 @@ package com.example.frequencydetector
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.media.MediaRecorder
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
@@ -25,6 +26,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var handler: Handler
     private lateinit var runnable: Runnable
 
+    private lateinit var mediaRecorder: MediaRecorder
 
     private var recording = false
 
@@ -46,33 +48,53 @@ class MainActivity : AppCompatActivity() {
         checkForPermissions()
 
         handler = HandlerCompat.createAsync(mainLooper)
-        runnable = Runnable {
-            if (binding.textFrequency.text == "Recording..."){
-                binding.textFrequency.text = "Recording"
-            } else {
-                binding.textFrequency.apply {
-                    text = "$text."
-                }
-            }
-            handler.postDelayed(runnable,1000L)
-        }
+        runnable = Runnable { runCoreLoop() }
+        setUpMediaRecorder()
 
         binding.initialController.setOnClickListener(View.OnClickListener {
             if (checkForPermissions()){
                 if (recording){
-                    binding.initialController.setBackgroundResource(R.drawable.icon_controller_off)
-                    handler.removeCallbacks(runnable)
-                    binding.textFrequency.text = "Stopped"
-                    recording = false
-
+                    stopRecording()
                 } else {
-                    binding.initialController.setBackgroundResource(R.drawable.icon_controller_on)
-                    binding.textFrequency.text = "Recording"
-                    handler.postDelayed(runnable,1000L)
-                    recording = true
+                    startRecording()
                 }
             }
         })
+    }
+
+    fun startRecording(){
+        binding.initialController.setBackgroundResource(R.drawable.icon_controller_on)
+        binding.textFrequency.text = "Recording"
+        handler.postDelayed(runnable,1000L)
+        recording = true
+    }
+
+    fun stopRecording(){
+        binding.initialController.setBackgroundResource(R.drawable.icon_controller_off)
+        handler.removeCallbacks(runnable)
+        binding.textFrequency.text = "Stopped"
+        recording = false
+    }
+
+    fun runCoreLoop (){
+        if (binding.textFrequency.text == "Recording..."){
+            binding.textFrequency.text = "Recording"
+        } else {
+            binding.textFrequency.apply {
+                text = "$text."
+            }
+        }
+        handler.postDelayed(runnable,1000L)
+    }
+
+    fun setUpMediaRecorder(){
+        mediaRecorder.apply {
+            setAudioSource(MediaRecorder.AudioSource.MIC)
+            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            setAudioSamplingRate(44100)
+            setAudioEncodingBitRate(320000)
+        }
     }
 
     override fun onRequestPermissionsResult(
