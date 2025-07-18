@@ -2,7 +2,6 @@ package com.example.frequencydetector
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.content.pm.PathPermission
 import android.media.MediaRecorder
 import android.os.Bundle
 import android.os.Handler
@@ -11,13 +10,12 @@ import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.core.os.HandlerCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.frequencydetector.databinding.ActivityMainBinding
 import java.io.IOException
-import java.util.Objects
+import java.lang.Exception
 
 const val REQUEST_CODE = 200
 class MainActivity : AppCompatActivity() {
@@ -76,16 +74,15 @@ class MainActivity : AppCompatActivity() {
     private fun stopRecording(){
         binding.initialController.setBackgroundResource(R.drawable.icon_controller_off)
         handler.removeCallbacks(runnable)
-        mediaRecorder.stop()
-        mediaRecorder.release()
+        tryToStopMediaRecorder()
         recording = false
         binding.textFrequency.text = "Stopped"
     }
 
     private fun runCoreLoop (){
         if (recording){
-            mediaRecorder.stop()
-            mediaRecorder.release()
+            tryToStopMediaRecorder()
+            recording = false
         }
         setUpMediaRecorder()
         mediaRecorder.apply {
@@ -118,6 +115,15 @@ class MainActivity : AppCompatActivity() {
             filename = filename.plus("X")
         }
         return filename
+    }
+
+    private fun tryToStopMediaRecorder(){
+        try {
+            mediaRecorder.stop()
+            mediaRecorder.release()
+        }catch (e:Exception){
+            Log.d("Debug4","already stopped")
+        }
     }
 
     override fun onRequestPermissionsResult(
