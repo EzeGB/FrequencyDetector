@@ -2,6 +2,7 @@ package com.example.frequencydetector
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.pm.PathPermission
 import android.media.MediaRecorder
 import android.os.Bundle
 import android.os.Handler
@@ -15,6 +16,8 @@ import androidx.core.os.HandlerCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.frequencydetector.databinding.ActivityMainBinding
+import java.io.IOException
+import java.util.Objects
 
 const val REQUEST_CODE = 200
 class MainActivity : AppCompatActivity() {
@@ -29,6 +32,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mediaRecorder: MediaRecorder
 
     private var recording = false
+    private lateinit var dirPath : String
+    private var filename = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,7 +54,7 @@ class MainActivity : AppCompatActivity() {
 
         handler = HandlerCompat.createAsync(mainLooper)
         runnable = Runnable { runCoreLoop() }
-        setUpMediaRecorder()
+        dirPath = "${externalCacheDir?.absolutePath}/"
 
         binding.initialController.setOnClickListener(View.OnClickListener {
             if (checkForPermissions()){
@@ -62,32 +67,41 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    fun startRecording(){
+    private fun startRecording(){
         binding.initialController.setBackgroundResource(R.drawable.icon_controller_on)
-        binding.textFrequency.text = "Recording"
-        handler.postDelayed(runnable,1000L)
-        recording = true
+        binding.textFrequency.text = filename
+        handler.postDelayed(runnable,0L)
     }
 
-    fun stopRecording(){
+    private fun stopRecording(){
         binding.initialController.setBackgroundResource(R.drawable.icon_controller_off)
         handler.removeCallbacks(runnable)
-        binding.textFrequency.text = "Stopped"
+        mediaRecorder.stop()
+        mediaRecorder.release()
         recording = false
+        binding.textFrequency.text = "Stopped"
     }
 
-    fun runCoreLoop (){
-        if (binding.textFrequency.text == "Recording..."){
-            binding.textFrequency.text = "Recording"
-        } else {
-            binding.textFrequency.apply {
-                text = "$text."
-            }
+    private fun runCoreLoop (){
+        if (recording){
+            mediaRecorder.stop()
+            mediaRecorder.release()
         }
+        setUpMediaRecorder()
+        mediaRecorder.apply {
+            setOutputFile("$dirPath${renameFilename()}.mp3")
+            try {
+                prepare()
+            }catch (e:IOException){}
+            start()
+            recording = true
+        }
+        binding.textFrequency.text = "Recording: ".plus(filename)
         handler.postDelayed(runnable,1000L)
     }
 
-    fun setUpMediaRecorder(){
+    private fun setUpMediaRecorder(){
+        mediaRecorder = MediaRecorder()
         mediaRecorder.apply {
             setAudioSource(MediaRecorder.AudioSource.MIC)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
@@ -95,6 +109,15 @@ class MainActivity : AppCompatActivity() {
             setAudioSamplingRate(44100)
             setAudioEncodingBitRate(320000)
         }
+    }
+
+    private fun renameFilename() : String{
+        if (filename==""||filename=="TempXXXX"){
+            filename = "Temp"
+        }else{
+            filename = filename.plus("X")
+        }
+        return filename
     }
 
     override fun onRequestPermissionsResult(
