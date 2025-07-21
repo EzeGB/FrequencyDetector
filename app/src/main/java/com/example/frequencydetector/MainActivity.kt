@@ -2,6 +2,8 @@ package com.example.frequencydetector
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.media.AudioFormat
+import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Bundle
 import android.os.Handler
@@ -13,6 +15,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.os.HandlerCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import be.hogent.tarsos.dsp.MicrophoneAudioDispatcher
+import be.hogent.tarsos.dsp.pitch.PitchDetectionHandler
+import be.hogent.tarsos.dsp.pitch.PitchProcessor
 import com.example.frequencydetector.databinding.ActivityMainBinding
 import java.io.IOException
 import java.lang.Exception
@@ -28,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var runnable: Runnable
 
     private lateinit var mediaRecorder: MediaRecorder
+    private lateinit var pdh: PitchDetectionHandler
 
     private var recording = false
     private lateinit var dirPath : String
@@ -54,6 +60,19 @@ class MainActivity : AppCompatActivity() {
         runnable = Runnable { runCoreLoop() }
         dirPath = "${externalCacheDir?.absolutePath}/"
 
+        val dispatcher = MicrophoneAudioDispatcher(22050, 1024, 0)
+
+        pdh = PitchDetectionHandler { pitchDetectionResult, audioEvent ->
+            val pitchInHz = pitchDetectionResult.pitch
+            runOnUiThread{
+                processPitch(pitchInHz)
+            }
+        }
+        val pitchProcessor = PitchProcessor(PitchProcessor.PitchEstimationAlgorithm.FFT_YIN, 22050F,1024,pdh)
+        dispatcher.addAudioProcessor(pitchProcessor)
+        val audioThread = Thread(dispatcher,"Audio Thread")
+        audioThread.start()
+
         binding.initialController.setOnClickListener(View.OnClickListener {
             if (checkForPermissions()){
                 if (recording){
@@ -63,6 +82,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    private fun processPitch(pitchInHz: Float){
+        binding.textFrequency.text = pitchInHz.toString()
     }
 
     private fun startRecording(){
