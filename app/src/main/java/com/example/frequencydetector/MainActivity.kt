@@ -61,7 +61,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updatePitchText(pitchInHz: Float){
-        binding.textFrequency.text = pitchInHz.toString()
+        if (pitchInHz.toString()  == "-1.0")
+            binding.textFrequency.text = ". . ."
+        else
+            binding.textFrequency.text = String.format("%.2f",pitchInHz)
     }
 
     override fun onRequestPermissionsResult(
