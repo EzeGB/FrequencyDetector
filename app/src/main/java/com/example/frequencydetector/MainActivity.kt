@@ -33,7 +33,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var runnable: Runnable
 
     private lateinit var mediaRecorder: MediaRecorder
-    private lateinit var pdh: PitchDetectionHandler
+    private val audioThread = setUpPitchDetectionAudioThread()
 
     private var recording = false
     private lateinit var dirPath : String
@@ -60,19 +60,6 @@ class MainActivity : AppCompatActivity() {
         runnable = Runnable { runCoreLoop() }
         dirPath = "${externalCacheDir?.absolutePath}/"
 
-        val dispatcher = MicrophoneAudioDispatcher(22050, 1024, 0)
-
-        pdh = PitchDetectionHandler { pitchDetectionResult, audioEvent ->
-            val pitchInHz = pitchDetectionResult.pitch
-            runOnUiThread{
-                processPitch(pitchInHz)
-            }
-        }
-        val pitchProcessor = PitchProcessor(PitchProcessor.PitchEstimationAlgorithm.FFT_YIN, 22050F,1024,pdh)
-        dispatcher.addAudioProcessor(pitchProcessor)
-        val audioThread = Thread(dispatcher,"Audio Thread")
-        audioThread.start()
-
         binding.initialController.setOnClickListener(View.OnClickListener {
             if (checkForPermissions()){
                 if (recording){
@@ -92,6 +79,7 @@ class MainActivity : AppCompatActivity() {
         binding.initialController.setBackgroundResource(R.drawable.icon_controller_on)
         binding.textFrequency.text = filename
         handler.postDelayed(runnable,0L)
+        audioThread.start()
     }
 
     private fun stopRecording(){
@@ -99,7 +87,8 @@ class MainActivity : AppCompatActivity() {
         handler.removeCallbacks(runnable)
         tryToStopMediaRecorder()
         recording = false
-        binding.textFrequency.text = "Stopped"
+        //binding.textFrequency.text = "Stopped"
+        audioThread.interrupt()
     }
 
     private fun runCoreLoop (){
@@ -116,7 +105,7 @@ class MainActivity : AppCompatActivity() {
             start()
             recording = true
         }
-        binding.textFrequency.text = "Recording: ".plus(filename)
+        //binding.textFrequency.text = "Recording: ".plus(filename)
         handler.postDelayed(runnable,1000L)
     }
 
@@ -129,6 +118,20 @@ class MainActivity : AppCompatActivity() {
             setAudioSamplingRate(44100)
             setAudioEncodingBitRate(320000)
         }
+    }
+
+    private fun setUpPitchDetectionAudioThread () : Thread {
+        val dispatcher = MicrophoneAudioDispatcher(22050, 1024, 0)
+
+        val pdh = PitchDetectionHandler { pitchDetectionResult, audioEvent ->
+            val pitchInHz = pitchDetectionResult.pitch
+            runOnUiThread{
+                processPitch(pitchInHz)
+            }
+        }
+        val pitchProcessor = PitchProcessor(PitchProcessor.PitchEstimationAlgorithm.FFT_YIN, 22050F,1024,pdh)
+        dispatcher.addAudioProcessor(pitchProcessor)
+        return Thread(dispatcher,"Audio Thread")
     }
 
     private fun renameFilename() : String{
